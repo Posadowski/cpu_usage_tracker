@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
+static int threadNumber = 0;
 struct CPUStats {
 	char name[256];
 	long unsigned int user;
@@ -26,15 +27,34 @@ struct CPUStats {
 	long unsigned int guest_nice;
 };
 
-static double parseCPUStats(struct CPUStats prev,
-		struct CPUStats current) {
+void read_thread_number() {
+	FILE *file;
+	char buffer[256];
+	// Open /proc/stat for reading
+	file = fopen("/proc/stat", "r");
+	if (file == NULL) {
+		perror("File open error");
+		pthread_exit(NULL);
+	}
+
+	while (fgets(buffer, sizeof(buffer), file) != NULL) {
+		if (strncmp(buffer, "cpu", 3) == 0 && isdigit(buffer[3])) {
+			threadNumber++;
+		}
+	}
+
+	printf("threadNumber = %d\n", threadNumber);
+
+}
+
+static double parseCPUStats(struct CPUStats prev, struct CPUStats current) {
 	double prevIdle = prev.idle + prev.iowait;
 	double idle = current.idle + current.iowait;
 
 	double prevNonIdle = prev.user + prev.nice + prev.system + prev.irq
 			+ prev.softirq + prev.steal;
-	double nonIdle = current.user + current.nice + current.system
-			+ current.irq + current.softirq + current.steal;
+	double nonIdle = current.user + current.nice + current.system + current.irq
+			+ current.softirq + current.steal;
 
 	double prevTotal = prevIdle + prevNonIdle;
 	double total = idle + nonIdle;
@@ -42,42 +62,37 @@ static double parseCPUStats(struct CPUStats prev,
 	total -= prevTotal;
 	idle -= prevIdle;
 
-
 	return (total - idle) * 100 / total;
 }
 
 void* reader(void *arg) {
+	struct CPUStats statsPrev[threadNumber], statsCur[threadNumber]; // Initialization of the  CPUStats structure
 	FILE *file;
 	char buffer[256];
-	struct CPUStats statsPrev, statsCur; // Inicjalizacja struktury CPUStats
+
 	while (1) {
-		// Open /proc/stat for reading
-		file = fopen("/proc/stat", "r");
-		if (file == NULL) {
-			perror("File open error");
-			pthread_exit(NULL);
-		}
+		//Display read data
+		for (int i = 0; i < threadNumber; i++) {
 
-		// Read data from a file line by line
-		while (fgets(buffer, sizeof(buffer), file) != NULL) {
-
+			// Open /proc/stat for reading
 			file = fopen("/proc/stat", "r");
 			if (file == NULL) {
 				perror("File open error");
 				pthread_exit(NULL);
 			}
-			//Display read data
 			while (fgets(buffer, sizeof(buffer), file) != NULL) {
-				if (strncmp(buffer, "cpu0", 4) == 0) {
+
+				if (strncmp(buffer, "cpu", 3) == 0 && ((buffer[3] - '0') == i)) {
 					sscanf(buffer, "%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
-							statsPrev.name, &statsPrev.user, &statsPrev.nice,
-							&statsPrev.system, &statsPrev.idle,
-							&statsPrev.iowait, &statsPrev.irq,
-							&statsPrev.softirq, &statsPrev.steal,
-							&statsPrev.guest, &statsPrev.guest_nice);
-					//printf("%s", buffer);
+							statsPrev[i].name, &statsPrev[i].user,
+							&statsPrev[i].nice, &statsPrev[i].system,
+							&statsPrev[i].idle, &statsPrev[i].iowait,
+							&statsPrev[i].irq, &statsPrev[i].softirq,
+							&statsPrev[i].steal, &statsPrev[i].guest,
+							&statsPrev[i].guest_nice);
 				}
 			}
+
 			fclose(file);
 			sleep(1);
 			file = fopen("/proc/stat", "r");
@@ -86,27 +101,35 @@ void* reader(void *arg) {
 				pthread_exit(NULL);
 			}
 			while (fgets(buffer, sizeof(buffer), file) != NULL) {
-				if (strncmp(buffer, "cpu0", 4) == 0) {
-					sscanf(buffer, "%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
-							statsCur.name, &statsCur.user, &statsCur.nice,
-							&statsCur.system, &statsCur.idle, &statsCur.iowait,
-							&statsCur.irq, &statsCur.softirq, &statsCur.steal,
-							&statsCur.guest, &statsCur.guest_nice);
-					//printf("%s", buffer);
-					printf("CPU0 USAGE %.2f%%\n", parseCPUStats(statsPrev, statsCur));
+				if (strncmp(buffer, "cpu", 3) == 0 && ((buffer[3] - '0') == i)) {
+					{
+						sscanf(buffer,
+								"%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
+								statsCur[i].name, &statsCur[i].user,
+								&statsCur[i].nice, &statsCur[i].system,
+								&statsCur[i].idle, &statsCur[i].iowait,
+								&statsCur[i].irq, &statsCur[i].softirq,
+								&statsCur[i].steal, &statsCur[i].guest,
+								&statsCur[i].guest_nice);
+						printf("CPU%d USAGE %.2f%%\n", i,
+								parseCPUStats(statsPrev[i], statsCur[i]));
+					}
 				}
+
 			}
 			fclose(file);
 
 		}
-
 	}
+
 	pthread_exit(NULL);
 }
 int main() {
 	printf("cpu_usage_tracker\n");
 
 	pthread_t thread;
+
+	read_thread_number();
 
 	// Create thread
 	if (pthread_create(&thread, NULL, reader, NULL) != 0) {
