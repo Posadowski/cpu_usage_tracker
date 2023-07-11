@@ -1,33 +1,15 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <pthread.h>
 
-static int threadNumber = 0;
-struct CPUStats {
-	char name[256];
-	long unsigned int user;
-	long unsigned int nice;
-	long unsigned int system;
-	long unsigned int idle;
-	long unsigned int iowait;
-	long unsigned int irq;
-	long unsigned int softirq;
-	long unsigned int steal;
-	long unsigned int prevuser;
-	long unsigned int prevnice;
-	long unsigned int prevsystem;
-	long unsigned int previrq;
-	long unsigned int prevsoftirq;
-	long unsigned int prevsteal;
-	long unsigned int previdle;
-	long unsigned int previowait;
-	long unsigned int guest;
-	long unsigned int guest_nice;
-};
+#include "analyzer.h"
 
-void read_thread_number() {
+static int threadNumber = 0;
+
+void get_number_of_processor_cores() {
 	FILE *file;
 	char buffer[256];
 	// Open /proc/stat for reading
@@ -47,33 +29,16 @@ void read_thread_number() {
 
 }
 
-static double parseCPUStats(struct CPUStats prev, struct CPUStats current) {
-	double prevIdle = prev.idle + prev.iowait;
-	double idle = current.idle + current.iowait;
-
-	double prevNonIdle = prev.user + prev.nice + prev.system + prev.irq
-			+ prev.softirq + prev.steal;
-	double nonIdle = current.user + current.nice + current.system + current.irq
-			+ current.softirq + current.steal;
-
-	double prevTotal = prevIdle + prevNonIdle;
-	double total = idle + nonIdle;
-
-	total -= prevTotal;
-	idle -= prevIdle;
-
-	return (total - idle) * 100 / total;
-}
-
 void* reader(void *arg) {
-	struct CPUStats statsPrev[threadNumber], statsCur[threadNumber]; // Initialization of the  CPUStats structure
+	pthread_t analyzer;
 	FILE *file;
 	char buffer[256];
 
 	while (1) {
 		//Display read data
 		for (int i = 0; i < threadNumber; i++) {
-
+			struct ThreadParams* stats; // Initialization of the  CPUStats structure
+			stats = (struct ThreadParams*)malloc(sizeof(struct ThreadParams));
 			// Open /proc/stat for reading
 			file = fopen("/proc/stat", "r");
 			if (file == NULL) {
@@ -84,12 +49,12 @@ void* reader(void *arg) {
 
 				if (strncmp(buffer, "cpu", 3) == 0 && ((buffer[3] - '0') == i)) {
 					sscanf(buffer, "%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
-							statsPrev[i].name, &statsPrev[i].user,
-							&statsPrev[i].nice, &statsPrev[i].system,
-							&statsPrev[i].idle, &statsPrev[i].iowait,
-							&statsPrev[i].irq, &statsPrev[i].softirq,
-							&statsPrev[i].steal, &statsPrev[i].guest,
-							&statsPrev[i].guest_nice);
+							stats->prev.name, &stats->prev.user,
+							&stats->prev.nice, &stats->prev.system,
+							&stats->prev.idle, &stats->prev.iowait,
+							&stats->prev.irq,  &stats->prev.softirq,
+							&stats->prev.steal, &stats->prev.guest,
+							&stats->prev.guest_nice);
 				}
 			}
 
@@ -105,14 +70,20 @@ void* reader(void *arg) {
 					{
 						sscanf(buffer,
 								"%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
-								statsCur[i].name, &statsCur[i].user,
-								&statsCur[i].nice, &statsCur[i].system,
-								&statsCur[i].idle, &statsCur[i].iowait,
-								&statsCur[i].irq, &statsCur[i].softirq,
-								&statsCur[i].steal, &statsCur[i].guest,
-								&statsCur[i].guest_nice);
-						printf("CPU%d USAGE %.2f%%\n", i,
-								parseCPUStats(statsPrev[i], statsCur[i]));
+								stats->current.name, &stats->current.user,
+								&stats->current.nice, &stats->current.system,
+								&stats->current.idle, &stats->current.iowait,
+								&stats->current.irq, &stats->current.softirq,
+								&stats->current.steal, &stats->current.guest,
+								&stats->current.guest_nice);
+
+						int result = pthread_create(&analyzer, NULL, analyze_cpu_usage, (void*)stats);
+						    if (result != 0) {
+						        printf("Thread creation error: %d\n", result);
+						        pthread_exit(NULL);
+						    }
+
+						    pthread_join(analyzer, NULL);
 					}
 				}
 
@@ -120,6 +91,8 @@ void* reader(void *arg) {
 			fclose(file);
 
 		}
+		printf("\n");
+		printf("\n");
 	}
 
 	pthread_exit(NULL);
@@ -129,7 +102,8 @@ int main() {
 
 	pthread_t thread;
 
-	read_thread_number();
+	get_number_of_processor_cores();
+
 
 	// Create thread
 	if (pthread_create(&thread, NULL, reader, NULL) != 0) {
