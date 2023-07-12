@@ -1,6 +1,8 @@
 #ifndef ANALYZER_H_
 #define ANALYZER_H_
 
+#include <semaphore.h>
+
 struct CPUStats {
 	char name[256];
 	long unsigned int user;
@@ -27,7 +29,8 @@ struct ThreadParams{
 	struct CPUStats prev;
 	struct CPUStats current;
 };
-
+struct ThreadParams *stats;
+sem_t readerSemaphore;
 void* analyze_cpu_usage(void* args);
 
 #endif /* ANALYZER_H_ */

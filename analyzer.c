@@ -7,10 +7,12 @@
 #include "printer.h"
 
 void* analyze_cpu_usage(void *args) {
-
+	printf("waiting");
+	sem_wait(&readerSemaphore);
+	printf("done");
 	pthread_t printer;
-
-	struct ThreadParams *params = (struct ThreadParams*) args;
+	while(1){
+	struct ThreadParams *params = stats;
 	struct CPUusage *usage = malloc(sizeof(struct CPUusage));
 
 
@@ -36,7 +38,7 @@ void* analyze_cpu_usage(void *args) {
 	snprintf(usage->name, sizeof(usage->name), "%s", params->prev.name);
 
 	usage->usage = (total - idle) * 100 / total;
-
+	sem_post(&readerSemaphore);
 	int result = pthread_create(&printer, NULL, print_cpu_usage, (void*)usage);
 	    if (result != 0) {
 	        printf("Thread creation error: %d\n", result);
@@ -44,6 +46,6 @@ void* analyze_cpu_usage(void *args) {
 	    }
 
 	    pthread_join(printer, NULL);
-
+	}
 	pthread_exit(NULL);
 }

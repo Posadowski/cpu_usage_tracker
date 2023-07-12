@@ -9,6 +9,7 @@
 
 static int threadNumber = 0;
 
+
 void get_number_of_processor_cores() {
 	FILE *file;
 	char buffer[256];
@@ -30,14 +31,15 @@ void get_number_of_processor_cores() {
 }
 
 void* reader(void *arg) {
-	pthread_t analyzer;
+	//pthread_t analyzer;
 	FILE *file;
 	char buffer[256];
 
 	while (1) {
 		//Display read data
 		for (int i = 0; i < threadNumber; i++) {
-			struct ThreadParams* stats; // Initialization of the  CPUStats structure
+			sem_wait(&readerSemaphore);
+
 			stats = (struct ThreadParams*)malloc(sizeof(struct ThreadParams));
 			// Open /proc/stat for reading
 			file = fopen("/proc/stat", "r");
@@ -77,22 +79,22 @@ void* reader(void *arg) {
 								&stats->current.steal, &stats->current.guest,
 								&stats->current.guest_nice);
 
-						int result = pthread_create(&analyzer, NULL, analyze_cpu_usage, (void*)stats);
-						    if (result != 0) {
-						        printf("Thread creation error: %d\n", result);
-						        pthread_exit(NULL);
-						    }
-
-						    pthread_join(analyzer, NULL);
+//						int result = pthread_create(&analyzer, NULL, analyze_cpu_usage, (void*)stats);
+//						    if (result != 0) {
+//						        printf("Thread creation error: %d\n", result);
+//						        pthread_exit(NULL);
+//						    }
+//
+//						    pthread_join(analyzer, NULL);
 					}
 				}
 
 			}
 			fclose(file);
-
+			sem_post(&readerSemaphore);
 		}
-		printf("\n");
-		printf("\n");
+		printf("next read\n");
+
 	}
 
 	pthread_exit(NULL);
@@ -100,21 +102,34 @@ void* reader(void *arg) {
 int main() {
 	printf("cpu_usage_tracker\n");
 
-	pthread_t thread;
+	pthread_t readerThread, analyzerThread;
 
 	get_number_of_processor_cores();
 
+	  sem_init(&readerSemaphore, 0, 1);
+	  printf("sem init");
 
-	// Create thread
-	if (pthread_create(&thread, NULL, reader, NULL) != 0) {
+	// Create readerThread
+	if (pthread_create(&readerThread, NULL, reader, NULL) != 0) {
 		fprintf(stderr, "Thread creation error\n");
 		return 1;
 	}
+	// Create analyzerThread
+		if (pthread_create(&analyzerThread, NULL, analyze_cpu_usage, NULL) != 0) {
+			fprintf(stderr, "Thread creation error\n");
+			return 1;
+		}
 
-	// Wait for the thread to end
-	if (pthread_join(thread, NULL) != 0) {
+	// Wait for the readerThread to end
+	if (pthread_join(readerThread, NULL) != 0) {
 		fprintf(stderr, "Thread waiting error\n");
 		return 1;
 	}
+	// Wait for the analyzerThread to end
+	if (pthread_join(analyzerThread, NULL) != 0) {
+		fprintf(stderr, "Thread waiting error\n");
+		return 1;
+	}
+	 sem_destroy(&readerSemaphore);
 	return 0;
 }
