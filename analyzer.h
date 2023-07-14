@@ -1,7 +1,16 @@
 #ifndef ANALYZER_H_
 #define ANALYZER_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <pthread.h>
+
 #include <semaphore.h>
+
+#define READ_DELAY 1000000
 
 struct CPUStats {
 	char name[256];
@@ -29,8 +38,12 @@ struct ThreadParams{
 	struct CPUStats prev;
 	struct CPUStats current;
 };
-struct ThreadParams *stats;
+
+struct ThreadParams **params_array;
 sem_t readerSemaphore;
+
+
+int get_semaphore_value(sem_t *sem);
 void* analyze_cpu_usage(void* args);
 
 #endif /* ANALYZER_H_ */

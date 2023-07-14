@@ -6,46 +6,56 @@
 
 #include "printer.h"
 
+extern int threadNumber;
+
+int get_semaphore_value(sem_t *sem) {
+	int sval;
+	sem_getvalue(sem, &sval);
+	return sval;
+}
+
 void* analyze_cpu_usage(void *args) {
-	printf("waiting");
-	sem_wait(&readerSemaphore);
-	printf("done");
-	pthread_t printer;
-	while(1){
-	struct ThreadParams *params = stats;
-	struct CPUusage *usage = malloc(sizeof(struct CPUusage));
 
+	while (1) {
+		sem_wait(&readerSemaphore);
+		sem_wait(&analyzerSemaphore);
 
+		for (int i = 0; i < threadNumber; i++) {
 
-	struct CPUStats prev = params->prev;
-	struct CPUStats current = params->current;
+			double prevIdle = params_array[i]->prev.idle
+					+ params_array[i]->prev.iowait;
+			double idle = params_array[i]->current.idle
+					+ params_array[i]->current.iowait;
 
-	double prevIdle = prev.idle + prev.iowait;
-	double idle = current.idle + current.iowait;
+			double prevNonIdle = params_array[i]->prev.user
+					+ params_array[i]->prev.nice + params_array[i]->prev.system
+					+ params_array[i]->prev.irq + params_array[i]->prev.softirq
+					+ params_array[i]->prev.steal;
+			double nonIdle = params_array[i]->current.user
+					+ params_array[i]->current.nice
+					+ params_array[i]->current.system
+					+ params_array[i]->current.irq
+					+ params_array[i]->current.softirq
+					+ params_array[i]->current.steal;
 
-	double prevNonIdle = prev.user + prev.nice + prev.system + prev.irq
-			+ prev.softirq + prev.steal;
-	double nonIdle = current.user + current.nice + current.system + current.irq
-			+ current.softirq + current.steal;
+			double prevTotal = prevIdle + prevNonIdle;
+			double total = idle + nonIdle;
 
-	double prevTotal = prevIdle + prevNonIdle;
-	double total = idle + nonIdle;
+			total -= prevTotal;
+			idle -= prevIdle;
 
-	total -= prevTotal;
-	idle -= prevIdle;
+			char nameBuffer[256];
 
-	//memset(&usage, 0, sizeof(usage));
-	snprintf(usage->name, sizeof(usage->name), "%s", params->prev.name);
+			snprintf(nameBuffer, sizeof(nameBuffer), "%s",
+					params_array[i]->prev.name);
 
-	usage->usage = (total - idle) * 100 / total;
-	sem_post(&readerSemaphore);
-	int result = pthread_create(&printer, NULL, print_cpu_usage, (void*)usage);
-	    if (result != 0) {
-	        printf("Thread creation error: %d\n", result);
-	        pthread_exit(NULL);
-	    }
+			snprintf(usage[i]->name, sizeof(usage[i]->name), "%s", nameBuffer);
+			usage[i]->usage = (total - idle) * 100 / total;
+		}
+		sem_post(&analyzerSemaphore);
+		sem_post(&readerSemaphore);
 
-	    pthread_join(printer, NULL);
+		usleep(READ_DELAY*2);
 	}
 	pthread_exit(NULL);
 }

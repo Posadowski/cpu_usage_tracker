@@ -1,13 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <pthread.h>
-
 #include "analyzer.h"
+#include "printer.h"
 
-static int threadNumber = 0;
+int threadNumber = 0;
 
 
 void get_number_of_processor_cores() {
@@ -17,7 +11,7 @@ void get_number_of_processor_cores() {
 	file = fopen("/proc/stat", "r");
 	if (file == NULL) {
 		perror("File open error");
-		pthread_exit(NULL);
+		return;
 	}
 
 	while (fgets(buffer, sizeof(buffer), file) != NULL) {
@@ -26,88 +20,98 @@ void get_number_of_processor_cores() {
 		}
 	}
 
-	printf("threadNumber = %d\n", threadNumber);
-
+	fclose(file);
 }
 
 void* reader(void *arg) {
-	//pthread_t analyzer;
 	FILE *file;
 	char buffer[256];
-
 	while (1) {
 		//Display read data
-		for (int i = 0; i < threadNumber; i++) {
-			sem_wait(&readerSemaphore);
+		sem_wait(&readerSemaphore);
 
-			stats = (struct ThreadParams*)malloc(sizeof(struct ThreadParams));
-			// Open /proc/stat for reading
-			file = fopen("/proc/stat", "r");
-			if (file == NULL) {
-				perror("File open error");
-				pthread_exit(NULL);
-			}
-			while (fgets(buffer, sizeof(buffer), file) != NULL) {
-
-				if (strncmp(buffer, "cpu", 3) == 0 && ((buffer[3] - '0') == i)) {
+		// Open /proc/stat for reading
+		file = fopen("/proc/stat", "r");
+		if (file == NULL) {
+			perror("File open error");
+			pthread_exit(NULL);
+		}
+		while (fgets(buffer, sizeof(buffer), file) != NULL) {
+			for (int i = 0; i < threadNumber; i++) {
+				if (strncmp(buffer, "cpu", 3) == 0
+						&& ((buffer[3] - '0') == i)) {
 					sscanf(buffer, "%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
-							stats->prev.name, &stats->prev.user,
-							&stats->prev.nice, &stats->prev.system,
-							&stats->prev.idle, &stats->prev.iowait,
-							&stats->prev.irq,  &stats->prev.softirq,
-							&stats->prev.steal, &stats->prev.guest,
-							&stats->prev.guest_nice);
+							params_array[i]->prev.name,
+							&params_array[i]->prev.user,
+							&params_array[i]->prev.nice,
+							&params_array[i]->prev.system,
+							&params_array[i]->prev.idle,
+							&params_array[i]->prev.iowait,
+							&params_array[i]->prev.irq,
+							&params_array[i]->prev.softirq,
+							&params_array[i]->prev.steal,
+							&params_array[i]->prev.guest,
+							&params_array[i]->prev.guest_nice);
+					//printf("reader prev %s\n", buffer);
 				}
 			}
+		}
 
-			fclose(file);
-			sleep(1);
-			file = fopen("/proc/stat", "r");
-			if (file == NULL) {
-				perror("File open error");
-				pthread_exit(NULL);
-			}
-			while (fgets(buffer, sizeof(buffer), file) != NULL) {
-				if (strncmp(buffer, "cpu", 3) == 0 && ((buffer[3] - '0') == i)) {
+		fclose(file);
+		usleep(READ_DELAY);
+		file = fopen("/proc/stat", "r");
+		if (file == NULL) {
+			perror("File open error");
+			pthread_exit(NULL);
+		}
+		while (fgets(buffer, sizeof(buffer), file) != NULL) {
+			for (int i = 0; i < threadNumber; i++) {
+				if (strncmp(buffer, "cpu", 3) == 0
+						&& ((buffer[3] - '0') == i)) {
 					{
 						sscanf(buffer,
 								"%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
-								stats->current.name, &stats->current.user,
-								&stats->current.nice, &stats->current.system,
-								&stats->current.idle, &stats->current.iowait,
-								&stats->current.irq, &stats->current.softirq,
-								&stats->current.steal, &stats->current.guest,
-								&stats->current.guest_nice);
-
-//						int result = pthread_create(&analyzer, NULL, analyze_cpu_usage, (void*)stats);
-//						    if (result != 0) {
-//						        printf("Thread creation error: %d\n", result);
-//						        pthread_exit(NULL);
-//						    }
-//
-//						    pthread_join(analyzer, NULL);
+								params_array[i]->current.name,
+								&params_array[i]->current.user,
+								&params_array[i]->current.nice,
+								&params_array[i]->current.system,
+								&params_array[i]->current.idle,
+								&params_array[i]->current.iowait,
+								&params_array[i]->current.irq,
+								&params_array[i]->current.softirq,
+								&params_array[i]->current.steal,
+								&params_array[i]->current.guest,
+								&params_array[i]->current.guest_nice);
+						//printf("reader curr %s\n", buffer);
 					}
 				}
-
 			}
-			fclose(file);
-			sem_post(&readerSemaphore);
 		}
-		printf("next read\n");
-
+		fclose(file);
+		sem_post(&readerSemaphore);
+		usleep(READ_DELAY);
 	}
-
 	pthread_exit(NULL);
 }
+
 int main() {
 	printf("cpu_usage_tracker\n");
 
-	pthread_t readerThread, analyzerThread;
+	pthread_t readerThread, analyzerThread, printerThread;
 
 	get_number_of_processor_cores();
 
-	  sem_init(&readerSemaphore, 0, 1);
-	  printf("sem init");
+	params_array = malloc(threadNumber * sizeof(struct ThreadParams*));
+	usage = malloc(threadNumber * sizeof(struct CPUusage*));
+
+
+	for (int i = 0; i < threadNumber; i++) {
+		params_array[i] = malloc(sizeof(struct ThreadParams));
+		usage[i] = malloc(sizeof(struct CPUusage));
+	}
+
+	sem_init(&readerSemaphore, 0, 1);
+	sem_init(&analyzerSemaphore, 0, 1);
 
 	// Create readerThread
 	if (pthread_create(&readerThread, NULL, reader, NULL) != 0) {
@@ -115,10 +119,15 @@ int main() {
 		return 1;
 	}
 	// Create analyzerThread
-		if (pthread_create(&analyzerThread, NULL, analyze_cpu_usage, NULL) != 0) {
-			fprintf(stderr, "Thread creation error\n");
-			return 1;
-		}
+	if (pthread_create(&analyzerThread, NULL, analyze_cpu_usage, NULL) != 0) {
+		fprintf(stderr, "Thread creation error\n");
+		return 1;
+	}
+
+	if (pthread_create(&printerThread, NULL, print_cpu_usage, NULL) != 0) {
+		fprintf(stderr, "Thread creation error\n");
+		return 1;
+	}
 
 	// Wait for the readerThread to end
 	if (pthread_join(readerThread, NULL) != 0) {
@@ -130,6 +139,13 @@ int main() {
 		fprintf(stderr, "Thread waiting error\n");
 		return 1;
 	}
-	 sem_destroy(&readerSemaphore);
+	// Wait for the printerThread to end
+	if (pthread_join(printerThread, NULL) != 0) {
+		fprintf(stderr, "Thread waiting error\n");
+		return 1;
+	}
+	sem_destroy(&readerSemaphore);
+	sem_destroy(&analyzerSemaphore);
+
 	return 0;
 }
