@@ -1,25 +1,26 @@
 #include "analyzer.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <pthread.h>
-
+#include "reader.h"
 #include "printer.h"
+#include "logger.h"
 
 extern int threadNumber;
-
-int get_semaphore_value(sem_t *sem) {
-	int sval;
-	sem_getvalue(sem, &sval);
-	return sval;
-}
+extern bool analyzer_active;
 
 void* analyze_cpu_usage(void *args) {
 
 	while (1) {
-		sem_wait(&readerSemaphore);
-		sem_wait(&analyzerSemaphore);
+		LOG_DEBUG("anylze wait for reader");
+		pthread_mutex_lock(&reader_mutex);
 
+		pthread_cond_wait(&reader_cond, &reader_mutex); // Wait for a notification from the reader thread
+
+		LOG_DEBUG("anylze start");
+		pthread_mutex_lock(&analyzer_mutex);
 		for (int i = 0; i < threadNumber; i++) {
 
 			double prevIdle = params_array[i]->prev.idle
@@ -52,10 +53,15 @@ void* analyze_cpu_usage(void *args) {
 			snprintf(usage[i]->name, sizeof(usage[i]->name), "%s", nameBuffer);
 			usage[i]->usage = (total - idle) * 100 / total;
 		}
-		sem_post(&analyzerSemaphore);
-		sem_post(&readerSemaphore);
 
-		usleep(READ_DELAY*2);
+		pthread_mutex_unlock(&reader_mutex);
+
+		pthread_cond_signal(&analyzer_cond); // Notification that the reader thread has completed its work
+		LOG_INFO("analyzer_cond send notification");
+		analyzer_active = true;
+		pthread_mutex_unlock(&analyzer_mutex);
+		LOG_INFO("analyzer_mutex unlock");
+		usleep(READ_DELAY);
 	}
 	pthread_exit(NULL);
 }

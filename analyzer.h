@@ -8,9 +8,8 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include <semaphore.h>
 
-#define READ_DELAY 1000000
+#define READ_DELAY 250000
 
 struct CPUStats {
 	char name[256];
@@ -40,10 +39,9 @@ struct ThreadParams{
 };
 
 struct ThreadParams **params_array;
-sem_t readerSemaphore;
 
-
-int get_semaphore_value(sem_t *sem);
+pthread_mutex_t analyzer_mutex;
+pthread_cond_t analyzer_cond;
 void* analyze_cpu_usage(void* args);
 
 #endif /* ANALYZER_H_ */
