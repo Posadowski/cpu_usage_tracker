@@ -20,11 +20,11 @@ $(BUILD_DIR)/reader.o: reader.c reader.h analyzer.h logger.h
 	mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c reader.c -o $(BUILD_DIR)/reader.o	
 	
-$(BUILD_DIR)/analyzer.o: analyzer.c analyzer.h printer.h
+$(BUILD_DIR)/analyzer.o: analyzer.c analyzer.h printer.h logger.h
 	mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c analyzer.c -o $(BUILD_DIR)/analyzer.o	
 	
-$(BUILD_DIR)/printer.o: printer.c printer.h
+$(BUILD_DIR)/printer.o: printer.c printer.h logger.h
 	mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c printer.c -o $(BUILD_DIR)/printer.o		
 
