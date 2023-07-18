@@ -19,12 +19,14 @@ void* print_cpu_usage(void* args){
 
 	    pthread_cond_wait(&analyzer_cond, &analyzer_mutex); // Wait for a notification from the analyzer thread
 
+#if DEVELOP_VERSION == 0
 	    LOG_DEBUG("printer start");
 	    int ret = system("clear");
 	    if (ret == -1) {
 	      	LOG_ERROR(" call clear in linux");
 	      	return 0;
 	      }
+#endif
 		for (int i = 0; i < cpuNumber; i++) {
 			if(strlen(usage[i]->name) != 0){
 				if(strlen(usage[i]->name) != 0)printf("%s usage %.2f%% \n",usage[i]->name,usage[i]->usage);
