@@ -31,10 +31,10 @@ $(BUILD_DIR)/printer.o: printer.c printer.h
 test: CFLAGS += -DTEST_BUILD
 test: LDFLAGS += -Wl,--wrap=fopen
 test: test.c $(BUILD_DIR)/reader.o 
-	$(CC) $(CFLAGS) -o test test.c $(BUILD_DIR)/reader.o $(LDFLAGS)
+	$(CC) $(CFLAGS) -D_POSIX_C_SOURCE=200809L -o test test.c $(BUILD_DIR)/reader.o $(LDFLAGS)
 	./test
 	
 
 .PHONY: clean
 clean:
-	rm -rf cpu_usage_tracker $(BUILD_DIR) test
+	rm -rf cpu_usage_tracker $(BUILD_DIR)
