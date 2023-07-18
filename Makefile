@@ -37,4 +37,4 @@ test: test.c $(BUILD_DIR)/reader.o
 
 .PHONY: clean
 clean:
-	rm -rf cpu_usage_tracker $(BUILD_DIR)
+	rm -rf cpu_usage_tracker test $(BUILD_DIR)
