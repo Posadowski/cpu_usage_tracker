@@ -2,7 +2,9 @@
 # CFLAGS = -Weverything -pthread
 
 CC = gcc -g
-CFLAGS = -O3 -Wall -Werror -pthread -std=c99
+CFLAGS = -O3 -Wall -Werror -pthread -std=c99 -pedantic -I. -D_POSIX_C_SOURCE=200809L
+
+LDFLAGS = -lcmocka # Add a cmock linking flag
 
 BUILD_DIR = build
 
@@ -27,6 +29,13 @@ $(BUILD_DIR)/printer.o: printer.c printer.h
 	mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c printer.c -o $(BUILD_DIR)/printer.o		
 
+test: CFLAGS += -DTEST_BUILD
+test: LDFLAGS += -Wl,--wrap=fopen
+test: test.c $(BUILD_DIR)/reader.o 
+	$(CC) $(CFLAGS) -o test test.c $(BUILD_DIR)/reader.o $(LDFLAGS)
+
+	
+
 .PHONY: clean
 clean:
-	rm -rf cpu_usage_tracker $(BUILD_DIR)
+	rm -rf cpu_usage_tracker $(BUILD_DIR) test
