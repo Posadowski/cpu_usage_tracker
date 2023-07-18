@@ -1,8 +1,7 @@
-# CC = clang
-# CFLAGS = -Weverything -pthread
+#CC = clang
 
 CC = gcc -g
-CFLAGS = -O3 -Wall -Werror -pthread -std=c99 -pedantic -I. -D_POSIX_C_SOURCE=200809L
+CFLAGS = -O3 -Wall -Werror -pthread -std=c99
 
 LDFLAGS = -lcmocka # Add a cmock linking flag
 

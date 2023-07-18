@@ -22,7 +22,7 @@ void* print_cpu_usage(void* args){
 	    LOG_DEBUG("printer start");
 		for (int i = 0; i < cpuNumber; i++) {
 			if(strlen(usage[i]->name) != 0){
-				if(usage[i]->name != 0)printf("%s usage %.2f%% \n",usage[i]->name,usage[i]->usage);
+				if(strlen(usage[i]->name) != 0)printf("%s usage %.2f%% \n",usage[i]->name,usage[i]->usage);
 			}
 		}
 		printf("\n");
