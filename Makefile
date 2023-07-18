@@ -2,7 +2,7 @@
 # CFLAGS = -Weverything -pthread
 
 CC = gcc -g
-CFLAGS = -O3 -Wall -Werror -pthread
+CFLAGS = -O3 -Wall -Werror -pthread -std=c99
 
 BUILD_DIR = build
 
