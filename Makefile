@@ -33,7 +33,7 @@ test: CFLAGS += -DTEST_BUILD
 test: LDFLAGS += -Wl,--wrap=fopen
 test: test.c $(BUILD_DIR)/reader.o 
 	$(CC) $(CFLAGS) -o test test.c $(BUILD_DIR)/reader.o $(LDFLAGS)
-
+	./test
 	
 
 .PHONY: clean
