@@ -18,7 +18,6 @@ int get_number_of_processor_cores() {
 	// Open /proc/stat for reading
 	file = fopen("/proc/stat", "r");
 	if (file == NULL) {
-		LOG_ERROR("File open error. CPU core count");
 		return 0;
 	}
 

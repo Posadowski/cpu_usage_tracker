@@ -53,7 +53,7 @@ void* watchdog(void *arg) {
 	LOG_INFO("watchdog thread finished");
 	pthread_exit(NULL);
 }
-
+#ifndef TEST_BUILD
 int main() {
 	printf("cpu_usage_tracker\n");
 
@@ -64,6 +64,10 @@ int main() {
 
 	pthread_t readerThread, analyzerThread, printerThread, watchdogThread;
 	cpuNumber = get_number_of_processor_cores();
+	if(cpuNumber == 0){
+		LOG_ERROR("File open error. CPU core count");
+		return 0;
+	}
 
 	printf("[INFO] detected %d cpu's\n", cpuNumber);
 
@@ -170,3 +174,4 @@ int main() {
 	printf("cpu_usage_tracker done");
 	return 0;
 }
+#endif
