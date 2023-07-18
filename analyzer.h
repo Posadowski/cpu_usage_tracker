@@ -9,8 +9,6 @@
 #include <pthread.h>
 
 
-#define READ_DELAY 250000
-
 struct CPUStats {
 	char name[256];
 	long unsigned int user;

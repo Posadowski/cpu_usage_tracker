@@ -1,12 +1,16 @@
 #include "reader.h"
 #include <stdbool.h>
+#include <time.h>
+ #include <unistd.h>
 #include "analyzer.h"
 #include "logger.h"
-
-extern int threadNumber;
+#include "utils.h"
+extern int cpuNumber;
 extern pthread_mutex_t reader_mutex;
 extern pthread_cond_t reader_cond;
 extern bool reader_active;
+extern volatile sig_atomic_t done;
+
 int get_number_of_processor_cores() {
 	FILE *file;
 	int cpu_number =0;
@@ -31,7 +35,7 @@ int get_number_of_processor_cores() {
 void* reader(void *arg) {
 	FILE *file;
 	char buffer[256];
-	while (1) {
+	while (!done) {
 
 		pthread_mutex_lock(&reader_mutex);
 		// Open /proc/stat for reading
@@ -41,7 +45,7 @@ void* reader(void *arg) {
 			pthread_exit(NULL);
 		}
 		while (fgets(buffer, sizeof(buffer), file) != NULL) {
-			for (int i = 0; i < threadNumber; i++) {
+			for (int i = 0; i < cpuNumber; i++) {
 				if (strncmp(buffer, "cpu", 3) == 0
 						&& ((buffer[3] - '0') == i)) {
 					sscanf(buffer, "%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
@@ -69,7 +73,7 @@ void* reader(void *arg) {
 			pthread_exit(NULL);
 		}
 		while (fgets(buffer, sizeof(buffer), file) != NULL) {
-			for (int i = 0; i < threadNumber; i++) {
+			for (int i = 0; i < cpuNumber; i++) {
 				if (strncmp(buffer, "cpu", 3) == 0
 						&& ((buffer[3] - '0') == i)) {
 					{
@@ -102,5 +106,7 @@ void* reader(void *arg) {
 
 		usleep(READ_DELAY);
 	}
+	pthread_mutex_unlock(&reader_mutex);
+	LOG_INFO("reader thread finished");
 	pthread_exit(NULL);
 }

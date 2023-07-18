@@ -7,13 +7,15 @@
 #include "reader.h"
 #include "printer.h"
 #include "logger.h"
+#include "utils.h"
 
-extern int threadNumber;
+extern int cpuNumber;
 extern bool analyzer_active;
+extern volatile sig_atomic_t done;
 
 void* analyze_cpu_usage(void *args) {
 
-	while (1) {
+	while (!done) {
 		LOG_DEBUG("anylze wait for reader");
 		pthread_mutex_lock(&reader_mutex);
 
@@ -21,7 +23,7 @@ void* analyze_cpu_usage(void *args) {
 
 		LOG_DEBUG("anylze start");
 		pthread_mutex_lock(&analyzer_mutex);
-		for (int i = 0; i < threadNumber; i++) {
+		for (int i = 0; i < cpuNumber; i++) {
 
 			double prevIdle = params_array[i]->prev.idle
 					+ params_array[i]->prev.iowait;
@@ -63,5 +65,8 @@ void* analyze_cpu_usage(void *args) {
 		LOG_INFO("analyzer_mutex unlock");
 		usleep(READ_DELAY);
 	}
+	pthread_mutex_unlock(&reader_mutex);
+	pthread_mutex_unlock(&analyzer_mutex);
+	LOG_INFO("analyzer thread finished");
 	pthread_exit(NULL);
 }

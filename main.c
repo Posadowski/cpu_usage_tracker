@@ -1,11 +1,11 @@
 #include <stdbool.h>
 #include <time.h>
-#include <errno.h>
+#include <signal.h>
 #include "reader.h"
 #include "analyzer.h"
 #include "printer.h"
 #include "logger.h"
-
+#include "utils.h"
 #define TIMEOUT_SECONDS 2
 
 #define LOG_WATCHDOG(...) printf("[WATCHDOG] %s\n", __VA_ARGS__);
@@ -13,45 +13,64 @@
 bool reader_active = false;
 bool analyzer_active = false;
 bool printer_active = false;
-int threadNumber = 0;
+int cpuNumber = 0;
+
+volatile sig_atomic_t done = 0;
+
+void term(int signum) {
+	LOG_INFO("SIGTERM signal detected");
+	done = 1;
+}
 
 void* watchdog(void *arg) {
-	while (1) {
+	while (!done) {
 		sleep(2);
+		pthread_mutex_lock(&reader_mutex);
 		if (!reader_active) {
 			LOG_ERROR("reader is not active");
 			exit(1);
 		} else {
 			reader_active = false;
 		}
+		pthread_mutex_unlock(&reader_mutex);
+		pthread_mutex_lock(&analyzer_mutex);
 		if (!analyzer_active) {
 			LOG_ERROR("analyzer is not active");
 			exit(1);
 		} else {
 			analyzer_active = false;
 		}
+		pthread_mutex_unlock(&analyzer_mutex);
+		pthread_mutex_lock(&printer_mutex);
 		if (!printer_active) {
 			LOG_ERROR("printer is not active");
 			exit(1);
 		} else {
 			printer_active = false;
 		}
+		pthread_mutex_unlock(&printer_mutex);
 	}
-	return NULL;
+	LOG_INFO("watchdog thread finished");
+	pthread_exit(NULL);
 }
 
 int main() {
 	printf("cpu_usage_tracker\n");
 
+	struct sigaction action;
+	memset(&action, 0, sizeof(struct sigaction));
+	action.sa_handler = term;
+	sigaction(SIGTERM, &action, NULL);
+
 	pthread_t readerThread, analyzerThread, printerThread, watchdogThread;
-	threadNumber = get_number_of_processor_cores();
+	cpuNumber = get_number_of_processor_cores();
 
-	printf("[INFO] detected %d cpu's\n", threadNumber);
+	printf("[INFO] detected %d cpu's\n", cpuNumber);
 
-	params_array = malloc(threadNumber * sizeof(struct ThreadParams*));
-	usage = malloc(threadNumber * sizeof(struct CPUusage*));
+	params_array = malloc(cpuNumber * sizeof(struct ThreadParams*));
+	usage = malloc(cpuNumber * sizeof(struct CPUusage*));
 
-	for (int i = 0; i < threadNumber; i++) {
+	for (int i = 0; i < cpuNumber; i++) {
 		params_array[i] = malloc(sizeof(struct ThreadParams));
 		usage[i] = malloc(sizeof(struct CPUusage));
 	}
@@ -105,6 +124,18 @@ int main() {
 		LOG_ERROR("watchdogThread creation error\n");
 		return 1;
 	}LOG_INFO("threads created");
+
+    while (!done)
+    {
+        int t = sleep(3);
+        /* sleep returns the number of seconds left if
+         * interrupted */
+        while (t > 0)
+        {
+            t = sleep(t);
+        }
+    }
+
 	// Wait for the readerThread to end
 	if (pthread_join(readerThread, NULL) != 0) {
 		LOG_ERROR("readerThread waiting error\n");
@@ -136,5 +167,6 @@ int main() {
 	pthread_mutex_destroy(&printer_mutex);
 	pthread_cond_destroy(&printer_cond);
 
+	printf("cpu_usage_tracker done");
 	return 0;
 }

@@ -7,26 +7,33 @@
 #include "analyzer.h"
 #include "analyzer.h"
 #include "logger.h"
-extern int threadNumber;
-extern bool printer_active;
+#include "utils.h"
 
+extern int cpuNumber;
+extern bool printer_active;
+extern volatile sig_atomic_t done;
 void* print_cpu_usage(void* args){
 	LOG_INFO("printer init");
-	while(1){
+	while(!done){
 		pthread_mutex_lock(&analyzer_mutex);
 
 	    pthread_cond_wait(&analyzer_cond, &analyzer_mutex); // Wait for a notification from the analyzer thread
 
 	    LOG_DEBUG("printer start");
-		for (int i = 0; i < threadNumber; i++) {
+		for (int i = 0; i < cpuNumber; i++) {
 			if(strlen(usage[i]->name) != 0){
 				if(usage[i]->name != 0)printf("%s usage %.2f%% \n",usage[i]->name,usage[i]->usage);
 			}
 		}
 		printf("\n");
+		pthread_mutex_lock(&printer_mutex);
 		printer_active = true;
+		pthread_mutex_unlock(&printer_mutex);
 		pthread_mutex_unlock(&analyzer_mutex);
-		sleep(1);
+		usleep(READ_DELAY);
 	}
+	pthread_mutex_unlock(&printer_mutex);
+	pthread_mutex_unlock(&analyzer_mutex);
+	LOG_INFO("printer thread finished");
 	pthread_exit(NULL);
 }
