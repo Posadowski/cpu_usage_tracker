@@ -13,6 +13,10 @@
 extern int cpuNumber;
 extern bool printer_active;
 extern volatile sig_atomic_t done;
+extern pthread_mutex_t printer_mutex;
+extern pthread_mutex_t analyzer_mutex;
+extern pthread_cond_t analyzer_cond;
+
 void* print_cpu_usage(void *args) {
 	LOG_INFO("printer init");
 	while (!done) {

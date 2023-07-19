@@ -37,8 +37,7 @@ struct ThreadParams {
 
 struct ThreadParams **params_array;
 
-pthread_mutex_t analyzer_mutex;
-pthread_cond_t analyzer_cond;
+
 void* analyze_cpu_usage(void *args);
 
 #endif /* ANALYZER_H_ */

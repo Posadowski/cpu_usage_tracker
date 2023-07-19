@@ -15,6 +15,15 @@ bool analyzer_active = false;
 bool printer_active = false;
 int cpuNumber = 0;
 
+pthread_mutex_t reader_mutex;
+pthread_cond_t reader_cond;
+
+pthread_mutex_t analyzer_mutex;
+pthread_cond_t analyzer_cond;
+
+pthread_mutex_t printer_mutex;
+pthread_cond_t printer_cond;
+
 volatile sig_atomic_t done = 0;
 
 void term(int signum) {
