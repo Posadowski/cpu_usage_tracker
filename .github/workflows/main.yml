@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: 
+      - master
+      - develop
+  pull_request:
+    branches: 
+      - maste
+      - develop
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
+    - name: make test
+      run: make test
