@@ -3,12 +3,16 @@
 #include <setjmp.h>
 #include <cmocka.h>
 #include <string.h>
+#include <pthread.h>
 #include "reader.h"
 
 //definitions required by reader.c
 int cpuNumber = 0;
 bool reader_active = false;
 bool done = 0;
+pthread_mutex_t reader_mutex;
+pthread_cond_t reader_cond;
+struct ThreadParams **params_array;
 
 // Mock fopen() replacement function
 FILE* __wrap_fopen(const char *path, const char *mode) {
