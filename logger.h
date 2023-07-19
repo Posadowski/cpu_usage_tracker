@@ -12,5 +12,4 @@
 #endif
 #define LOG_ERROR(...) printf("[ERROR] %s\n", __VA_ARGS__);
 
-
 #endif /* LOGGER_H_ */

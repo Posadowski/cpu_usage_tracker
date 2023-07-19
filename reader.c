@@ -14,7 +14,7 @@ extern volatile sig_atomic_t done;
 
 int get_number_of_processor_cores() {
 	FILE *file;
-	int cpu_number =0;
+	int cpu_number = 0;
 	char buffer[256];
 	// Open /proc/stat for reading
 	file = fopen("/proc/stat", "r");
@@ -59,7 +59,7 @@ void* reader(void *arg) {
 							&params_array[i]->prev.steal,
 							&params_array[i]->prev.guest,
 							&params_array[i]->prev.guest_nice);
-					LOG_DEBUG("reader prev "); LOG_DEBUG(buffer);
+					LOG_DEBUG("reader prev ");LOG_DEBUG(buffer);
 				}
 			}
 		}
@@ -89,7 +89,7 @@ void* reader(void *arg) {
 								&params_array[i]->current.steal,
 								&params_array[i]->current.guest,
 								&params_array[i]->current.guest_nice);
-						LOG_DEBUG("reader curr "); LOG_DEBUG(buffer);
+						LOG_DEBUG("reader curr ");LOG_DEBUG(buffer);
 						//printf("reader curr %s\n", buffer);
 					}
 				}

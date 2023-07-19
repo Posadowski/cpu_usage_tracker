@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <pthread.h>
 
-
 struct CPUStats {
 	char name[256];
 	long unsigned int user;
@@ -31,7 +30,7 @@ struct CPUStats {
 	long unsigned int guest_nice;
 };
 
-struct ThreadParams{
+struct ThreadParams {
 	struct CPUStats prev;
 	struct CPUStats current;
 };
@@ -40,6 +39,6 @@ struct ThreadParams **params_array;
 
 pthread_mutex_t analyzer_mutex;
 pthread_cond_t analyzer_cond;
-void* analyze_cpu_usage(void* args);
+void* analyze_cpu_usage(void *args);
 
 #endif /* ANALYZER_H_ */

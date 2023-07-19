@@ -49,8 +49,7 @@ void* watchdog(void *arg) {
 			printer_active = false;
 		}
 		pthread_mutex_unlock(&printer_mutex);
-	}
-	LOG_INFO("watchdog thread finished");
+	} LOG_INFO("watchdog thread finished");
 	pthread_exit(NULL);
 }
 #ifndef TEST_BUILD
@@ -64,7 +63,7 @@ int main() {
 
 	pthread_t readerThread, analyzerThread, printerThread, watchdogThread;
 	cpuNumber = get_number_of_processor_cores();
-	if(cpuNumber == 0){
+	if (cpuNumber == 0) {
 		LOG_ERROR("File open error. CPU core count");
 		return 0;
 	}
@@ -129,16 +128,14 @@ int main() {
 		return 1;
 	}LOG_INFO("threads created");
 
-    while (!done)
-    {
-        int t = sleep(3);
-        /* sleep returns the number of seconds left if
-         * interrupted */
-        while (t > 0)
-        {
-            t = sleep(t);
-        }
-    }
+	while (!done) {
+		int t = sleep(3);
+		/* sleep returns the number of seconds left if
+		 * interrupted */
+		while (t > 0) {
+			t = sleep(t);
+		}
+	}
 
 	// Wait for the readerThread to end
 	if (pthread_join(readerThread, NULL) != 0) {
