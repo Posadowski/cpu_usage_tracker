@@ -6,7 +6,7 @@ struct CPUusage{
 	double usage;
 };
 
-struct CPUusage **usage;
+
 
 void* print_cpu_usage(void* args);
 

@@ -25,7 +25,7 @@ pthread_mutex_t printer_mutex;
 pthread_cond_t printer_cond;
 
 struct ThreadParams **params_array;
-
+struct CPUusage **usage;
 volatile sig_atomic_t done = 0;
 
 void term(int signum) {
