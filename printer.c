@@ -4,6 +4,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
 #include "analyzer.h"
 #include "analyzer.h"
 #include "logger.h"

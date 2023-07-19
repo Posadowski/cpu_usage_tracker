@@ -1,7 +1,8 @@
 #include "reader.h"
 #include <stdbool.h>
 #include <time.h>
- #include <unistd.h>
+#include <unistd.h>
+#include <signal.h>
 #include "analyzer.h"
 #include "logger.h"
 #include "utils.h"
@@ -35,7 +36,6 @@ void* reader(void *arg) {
 	FILE *file;
 	char buffer[256];
 	while (!done) {
-
 		pthread_mutex_lock(&reader_mutex);
 		// Open /proc/stat for reading
 		file = fopen("/proc/stat", "r");
@@ -99,10 +99,6 @@ void* reader(void *arg) {
 		reader_active = true;
 		pthread_mutex_unlock(&reader_mutex);
 		pthread_cond_signal(&reader_cond); // Notification for analyzer that the reader thread has completed its work
-
-
-
-
 		usleep(READ_DELAY);
 	}
 	pthread_mutex_unlock(&reader_mutex);

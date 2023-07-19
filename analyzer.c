@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <pthread.h>
+#include <signal.h>
 #include "reader.h"
 #include "printer.h"
 #include "logger.h"
