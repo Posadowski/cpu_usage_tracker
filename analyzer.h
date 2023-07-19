@@ -35,8 +35,6 @@ struct ThreadParams {
 	struct CPUStats current;
 };
 
-struct ThreadParams **params_array;
-
 
 void* analyze_cpu_usage(void *args);
 

@@ -9,6 +9,9 @@
 extern int cpuNumber;
 extern pthread_mutex_t reader_mutex;
 extern pthread_cond_t reader_cond;
+
+extern struct ThreadParams **params_array;
+
 extern bool reader_active;
 extern volatile sig_atomic_t done;
 

@@ -17,7 +17,7 @@ extern pthread_mutex_t analyzer_mutex;
 extern pthread_cond_t analyzer_cond;
 extern pthread_mutex_t reader_mutex;
 extern pthread_cond_t reader_cond;
-
+extern struct ThreadParams **params_array;
 void* analyze_cpu_usage(void *args) {
 
 	while (!done) {
